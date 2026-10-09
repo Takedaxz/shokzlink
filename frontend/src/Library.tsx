@@ -204,7 +204,21 @@ function TrackPanel({
   onPlay: (t: Track, scope: "library" | "device") => void;
 }) {
   const [query, setQuery] = useState(""),
-    [sort, setSort] = useState("name"),
+    [sort, setSort] = useState(() => {
+      try {
+        const saved = localStorage.getItem(`shokzlink_${scope}_sort`);
+        if (saved === "name" || saved === "newest" || saved === "size") {
+          return saved;
+        }
+      } catch (error) {
+        if (!(error instanceof DOMException)) throw error;
+        console.warn("Unable to restore sorting preference", {
+          scope,
+          error: error.name,
+        });
+      }
+      return "name";
+    }),
     [selected, setSelected] = useState<string[]>([]),
     [target, setTarget] = useState("");
   const [currentFolder, setCurrentFolder] = useState<string>("");
@@ -264,9 +278,6 @@ function TrackPanel({
 
   const folderTracks = useMemo(() => {
     if (query.trim()) {
-      return tracks;
-    }
-    if (!currentFolder) {
       return tracks;
     }
     return tracks.filter((t) => {
@@ -452,7 +463,19 @@ function TrackPanel({
         <select
           aria-label={`Sort ${scope} tracks`}
           value={sort}
-          onChange={(e) => setSort(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value;
+            setSort(value);
+            try {
+              localStorage.setItem(`shokzlink_${scope}_sort`, value);
+            } catch (error) {
+              if (!(error instanceof DOMException)) throw error;
+              console.warn("Unable to save sorting preference", {
+                scope,
+                error: error.name,
+              });
+            }
+          }}
         >
           <option value="name">Name A–Z</option>
           <option value="newest">Newest first</option>
